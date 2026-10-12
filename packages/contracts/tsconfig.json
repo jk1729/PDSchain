@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "./dist",
+    "types": ["node", "mocha", "chai"]
+  },
+  "include": [
+    "./hardhat.config.ts",
+    "./src/**/*.ts",
+    "./scripts/**/*.ts",
+    "./test/**/*.ts",
+    "./typechain-types/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

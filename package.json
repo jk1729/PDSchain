@@ -1,0 +1,53 @@
+{
+  "name": "pdschain-v2",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PDSChain v2 — Blockchain-based Public Distribution System Monorepo",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run db:start && concurrently -n api,web -c cyan,magenta \"npm run dev --workspace=@pdschain/api\" \"npm run dev --workspace=@pdschain/web\"",
+    "build": "npm run db:generate && npm run build --workspace=@pdschain/api && npm run build --workspace=@pdschain/web && npm run compile --workspace=@pdschain/contracts",
+    "lint": "eslint .",
+    "typecheck": "npm run db:generate && npm run typecheck --workspace=@pdschain/api && npm run typecheck --workspace=@pdschain/web && npm run typecheck --workspace=@pdschain/contracts",
+    "test": "npm run db:start && npm test --workspace=@pdschain/api && npm test --workspace=@pdschain/web",
+    "test:contracts": "npm test --workspace=@pdschain/contracts",
+    "test:e2e": "npm run db:start && playwright test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:start": "node scripts/db-server.mjs start",
+    "db:stop": "node scripts/db-server.mjs stop",
+    "db:generate": "node scripts/db-generate.mjs",
+    "db:migrate": "npm run db:start && node scripts/db-migrate.mjs deploy",
+    "db:migrate:dev": "npm run db:start && node scripts/db-migrate.mjs dev",
+    "db:status": "npm run db:start && node scripts/db-migrate.mjs status",
+    "contracts:compile": "npm run compile --workspace=@pdschain/contracts",
+    "contracts:test": "npm test --workspace=@pdschain/contracts",
+    "contracts:deploy:local": "npm run deploy:local --workspace=@pdschain/contracts",
+    "doctor": "node scripts/doctor.mjs"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.5.0",
+    "dotenv": "^16.4.7",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@embedded-postgres/windows-x64": "16.14.0-beta.17",
+    "@eslint/js": "^9.18.0",
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^22.10.7",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.18.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "prisma": "^6.5.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0"
+  }
+}
