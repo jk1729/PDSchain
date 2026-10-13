@@ -18,6 +18,10 @@ import { ServiceStatusPage } from './pages/ServiceStatusPage';
 import { StaffRequestCreatePage } from './pages/StaffRequestCreatePage';
 import { UnauthorizedPage } from './pages/UnauthorizedPage';
 import { WelcomePage } from './pages/WelcomePage';
+import { WarehouseInventoryPage } from './pages/WarehouseInventoryPage';
+import { FpsDistributionPage } from './pages/FpsDistributionPage';
+import { BeneficiaryEntitlementsPage } from './pages/BeneficiaryEntitlementsPage';
+import { DistributionLedgerPage } from './pages/DistributionLedgerPage';
 
 export function App() {
   return (
@@ -40,6 +44,18 @@ export function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="profile" element={<ProfilePage />} />
               <Route path="staff-requests/new" element={<StaffRequestCreatePage />} />
+              <Route path="beneficiary-entitlements" element={<BeneficiaryEntitlementsPage />} />
+              <Route path="distribution-ledger" element={<DistributionLedgerPage />} />
+            </Route>
+
+            {/* Protected routes: Warehouse Managers & Admins */}
+            <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'WAREHOUSE_MANAGER']} />}>
+              <Route path="warehouse-inventory" element={<WarehouseInventoryPage />} />
+            </Route>
+
+            {/* Protected routes: FPS Operators & Admins */}
+            <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'FPS_OPERATOR']} />}>
+              <Route path="fps-distribution" element={<FpsDistributionPage />} />
             </Route>
 
             {/* Protected routes: Administrator only */}

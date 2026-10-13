@@ -47,6 +47,11 @@ const apiEnvSchema = z
     SMTP_FROM: z.string().default('noreply@pdschain.example.org'),
     HARDHAT_RPC_URL: z.string().url().default('http://127.0.0.1:8545'),
     HARDHAT_CHAIN_ID: z.coerce.number().int().positive().default(31337),
+    DISTRIBUTION_CONTRACT_ADDRESS: z.string().optional().default(''),
+    BLOCKCHAIN_OPERATOR_PRIVATE_KEY: z
+      .string()
+      .optional()
+      .default('0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'),
   })
   .superRefine((env, ctx) => {
     const origins = env.CORS_ALLOWED_ORIGINS.split(',').map((o) => o.trim());

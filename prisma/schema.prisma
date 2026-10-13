@@ -61,6 +61,7 @@ model User {
   reviewedRequests    StaffAccessRequest[]     @relation("ReviewedByAdmin")
   auditEventsAsActor  SecurityAuditEvent[]     @relation("AuditActor")
   auditEventsAsTarget SecurityAuditEvent[]     @relation("AuditTargetUser")
+  blockchainTransactions BlockchainTransaction[] @relation("BlockchainTxActor")
 
   @@index([status])
   @@map("users")
@@ -182,3 +183,49 @@ model SecurityAuditEvent {
   @@index([targetUserId, createdAt])
   @@map("security_audit_events")
 }
+
+enum BlockchainTxType {
+  COMMODITY_REGISTERED
+  OPERATOR_AUTHORIZED
+  OPERATOR_REVOKED
+  BENEFICIARY_REGISTERED
+  BENEFICIARY_STATUS_UPDATED
+  ENTITLEMENT_CONFIGURED
+  WAREHOUSE_STOCK_RECEIVED
+  STOCK_TRANSFERRED_FPS
+  RATION_DISTRIBUTED
+}
+
+enum BlockchainTxStatus {
+  SUBMITTED
+  CONFIRMED
+  FAILED
+}
+
+model BlockchainTransaction {
+  id              String             @id @default(uuid()) @db.Uuid
+  txHash          String             @unique @map("tx_hash") @db.VarChar(128)
+  txType          BlockchainTxType   @map("tx_type")
+  status          BlockchainTxStatus @default(CONFIRMED)
+  blockNumber     Int?               @map("block_number")
+  contractAddress String             @map("contract_address") @db.VarChar(64)
+  fromAddress     String             @map("from_address") @db.VarChar(64)
+  actorUserId     String?            @map("actor_user_id") @db.Uuid
+  entityId        String?            @map("entity_id") @db.VarChar(128)
+  beneficiaryRef  String?            @map("beneficiary_ref") @db.VarChar(128)
+  commodityId     String?            @map("commodity_id") @db.VarChar(128)
+  quantity        Decimal?           @db.Decimal(18, 4)
+  claimRef        String?            @map("claim_ref") @db.VarChar(128)
+  metadata        Json?              @db.JsonB
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actorUser User? @relation("BlockchainTxActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([txType, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([entityId, createdAt])
+  @@index([beneficiaryRef])
+  @@index([claimRef])
+  @@map("blockchain_transactions")
+}
+

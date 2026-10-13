@@ -7,6 +7,16 @@ import {
   UserDetail,
   UserSummaryItem,
 } from '../types/auth';
+import {
+  BeneficiaryItem,
+  BlockchainActionResponse,
+  BlockchainTxItem,
+  CommodityItem,
+  EntitlementItem,
+  RecordDistributionPayload,
+  WarehouseReceiptPayload,
+  WarehouseTransferPayload,
+} from '../types/distribution';
 
 export interface DatabaseHealthProbe {
   status: 'up' | 'down';
@@ -439,6 +449,107 @@ export class ApiClient {
 
   public async listAuditEvents(limit = 100): Promise<SecurityAuditEventItem[]> {
     return this.request<SecurityAuditEventItem[]>(`/admin/audit-events?limit=${limit}`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Phase 3 Distribution & Smart Contract Endpoints
+  // ---------------------------------------------------------------------------
+  public async fetchCommodities(): Promise<CommodityItem[]> {
+    const res = await this.request<{ commodities: CommodityItem[] }>('/distribution/commodities');
+    return res.commodities;
+  }
+
+  public async registerCommodity(payload: { commodityId: string; name: string; unit: string }) {
+    return this.request('/distribution/commodities', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async fetchBeneficiary(ref: string): Promise<BeneficiaryItem> {
+    const res = await this.request<{ beneficiary: BeneficiaryItem }>(
+      `/distribution/beneficiaries/${encodeURIComponent(ref)}`,
+    );
+    return res.beneficiary;
+  }
+
+  public async registerBeneficiary(payload: { beneficiaryRef: string; districtCode: string }) {
+    return this.request('/distribution/beneficiaries', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async fetchEntitlement(
+    ref: string,
+    period: number,
+    commodityId: string,
+  ): Promise<EntitlementItem> {
+    const res = await this.request<{ entitlement: EntitlementItem }>(
+      `/distribution/entitlements?ref=${encodeURIComponent(ref)}&period=${period}&commodityId=${encodeURIComponent(commodityId)}`,
+    );
+    return res.entitlement;
+  }
+
+  public async setEntitlement(payload: {
+    beneficiaryRef: string;
+    period: number;
+    commodityId: string;
+    allocatedQuantity: number;
+  }) {
+    return this.request('/distribution/entitlements', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async fetchWarehouseStock(warehouseId: string, commodityId: string): Promise<number> {
+    const res = await this.request<{ stock: number }>(
+      `/distribution/inventory/warehouse/${encodeURIComponent(warehouseId)}?commodityId=${encodeURIComponent(commodityId)}`,
+    );
+    return res.stock;
+  }
+
+  public async receiveWarehouseStock(
+    payload: WarehouseReceiptPayload,
+  ): Promise<BlockchainActionResponse> {
+    return this.request<BlockchainActionResponse>('/distribution/inventory/warehouse/receipt', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async transferStockToFps(
+    payload: WarehouseTransferPayload,
+  ): Promise<BlockchainActionResponse> {
+    return this.request<BlockchainActionResponse>('/distribution/inventory/warehouse/transfer', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async fetchFpsStock(fpsId: string, commodityId: string): Promise<number> {
+    const res = await this.request<{ stock: number }>(
+      `/distribution/inventory/fps/${encodeURIComponent(fpsId)}?commodityId=${encodeURIComponent(commodityId)}`,
+    );
+    return res.stock;
+  }
+
+  public async recordDistribution(
+    payload: RecordDistributionPayload,
+  ): Promise<BlockchainActionResponse> {
+    return this.request<BlockchainActionResponse>('/distribution/distribute', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async fetchDistributionTransactions(entityId?: string): Promise<BlockchainTxItem[]> {
+    const q = entityId ? `?entityId=${encodeURIComponent(entityId)}` : '';
+    const res = await this.request<{ transactions: BlockchainTxItem[] }>(
+      `/distribution/transactions${q}`,
+    );
+    return res.transactions;
   }
 }
 

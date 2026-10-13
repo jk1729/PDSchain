@@ -10,6 +10,9 @@ export interface LocalDeploymentManifest {
   chainId: number;
   contractName: string;
   contractAddress: string;
+  distributionContractName: string;
+  distributionContractAddress: string;
+  distributionDeploymentTxHash: string;
   deployerAddress: string;
   deploymentTxHash: string;
   deploymentBlockNumber: number;
@@ -29,18 +32,19 @@ async function main(): Promise<void> {
   const networkInfo = await ethers.provider.getNetwork();
   const chainId = Number(networkInfo.chainId);
 
-  const factory = await ethers.getContractFactory('FoundationSmokeAnchor');
-  const contract = await factory.deploy(deployer.address);
-  await contract.waitForDeployment();
+  // 1. Deploy FoundationSmokeAnchor (Phase 1 baseline)
+  const smokeFactory = await ethers.getContractFactory('FoundationSmokeAnchor');
+  const smokeContract = await smokeFactory.deploy(deployer.address);
+  await smokeContract.waitForDeployment();
 
-  const contractAddress = await contract.getAddress();
-  const deployTx = contract.deploymentTransaction();
-  if (!deployTx) {
-    throw new Error('Deployment transaction was not returned by provider.');
+  const smokeAddress = await smokeContract.getAddress();
+  const smokeDeployTx = smokeContract.deploymentTransaction();
+  if (!smokeDeployTx) {
+    throw new Error('Smoke deployment transaction was not returned by provider.');
   }
-  const deployReceipt = await deployTx.wait();
-  if (!deployReceipt || deployReceipt.status !== 1) {
-    throw new Error('Contract deployment transaction did not succeed.');
+  const smokeDeployReceipt = await smokeDeployTx.wait();
+  if (!smokeDeployReceipt || smokeDeployReceipt.status !== 1) {
+    throw new Error('Smoke contract deployment transaction did not succeed.');
   }
 
   const smokeCheckHash = ethers.keccak256(
@@ -48,25 +52,43 @@ async function main(): Promise<void> {
   );
   const smokeNote = 'Phase 1 local deployment & state interaction verification';
 
-  const smokeTx = await contract.recordSmokeCheck(smokeCheckHash, smokeNote);
+  const smokeTx = await smokeContract.recordSmokeCheck(smokeCheckHash, smokeNote);
   const smokeReceipt = await smokeTx.wait();
   if (!smokeReceipt || smokeReceipt.status !== 1) {
     throw new Error('Smoke-check state interaction transaction failed.');
   }
 
-  const count = await contract.checkCount();
-  const record = await contract.getSmokeRecord(1n);
+  const count = await smokeContract.checkCount();
+  const record = await smokeContract.getSmokeRecord(1n);
+
+  // 2. Deploy PDSChainDistribution (Phase 3 Core Domain)
+  const distFactory = await ethers.getContractFactory('PDSChainDistribution');
+  const distContract = await distFactory.deploy(deployer.address);
+  await distContract.waitForDeployment();
+
+  const distAddress = await distContract.getAddress();
+  const distDeployTx = distContract.deploymentTransaction();
+  if (!distDeployTx) {
+    throw new Error('Distribution deployment transaction was not returned by provider.');
+  }
+  const distDeployReceipt = await distDeployTx.wait();
+  if (!distDeployReceipt || distDeployReceipt.status !== 1) {
+    throw new Error('Distribution contract deployment transaction did not succeed.');
+  }
 
   const manifest: LocalDeploymentManifest = {
     project: 'pdschain-v2',
-    phase: 1,
+    phase: 3,
     networkName: network.name,
     chainId,
     contractName: 'FoundationSmokeAnchor',
-    contractAddress,
+    contractAddress: smokeAddress,
+    distributionContractName: 'PDSChainDistribution',
+    distributionContractAddress: distAddress,
+    distributionDeploymentTxHash: distDeployReceipt.hash,
     deployerAddress: deployer.address,
-    deploymentTxHash: deployReceipt.hash,
-    deploymentBlockNumber: deployReceipt.blockNumber,
+    deploymentTxHash: smokeDeployReceipt.hash,
+    deploymentBlockNumber: smokeDeployReceipt.blockNumber,
     smokeCheckTxHash: smokeReceipt.hash,
     smokeCheckBlockNumber: smokeReceipt.blockNumber,
     smokeCheckHash: record.checkHash,
@@ -79,19 +101,15 @@ async function main(): Promise<void> {
   const manifestPath = path.join(deploymentsDir, 'local.json');
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
 
-  console.log('=== PDSChain v2 Phase 1 Local Contract Deployment ===');
-  console.log(`Network:            ${manifest.networkName} (chainId: ${manifest.chainId})`);
-  console.log(`Contract:           ${manifest.contractName}`);
-  console.log(`Contract Address:   ${manifest.contractAddress}`);
-  console.log(`Deployer Address:   ${manifest.deployerAddress}`);
+  console.log('=== PDSChain v2 Local Contract Deployment (Phase 3) ===');
   console.log(
-    `Deployment Tx:      ${manifest.deploymentTxHash} (block ${manifest.deploymentBlockNumber})`,
+    `Network:                         ${manifest.networkName} (chainId: ${manifest.chainId})`,
   );
-  console.log(
-    `Smoke-Check Tx:     ${manifest.smokeCheckTxHash} (block ${manifest.smokeCheckBlockNumber})`,
-  );
-  console.log(`Verified Count:     ${manifest.recordedSequence}`);
-  console.log(`Manifest Written:   ${manifestPath}`);
+  console.log(`Deployer Address:                ${manifest.deployerAddress}`);
+  console.log(`FoundationSmokeAnchor Address:   ${manifest.contractAddress}`);
+  console.log(`PDSChainDistribution Address:    ${manifest.distributionContractAddress}`);
+  console.log(`Distribution Deployment Tx:      ${manifest.distributionDeploymentTxHash}`);
+  console.log(`Manifest Written:                ${manifestPath}`);
 }
 
 main().catch((error: unknown) => {

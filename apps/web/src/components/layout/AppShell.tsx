@@ -1,14 +1,18 @@
-import * as React from 'react';
+import { useState } from 'react';
 import {
   Activity,
+  Award,
   Boxes,
   FileCheck2,
   FileText,
+  History,
   Home,
   LogIn,
   LogOut,
   Menu,
+  Package,
   ShieldCheck,
+  Store,
   User,
   UserPlus,
   Users,
@@ -19,9 +23,12 @@ import { useAuth } from '../../context/AuthContext';
 import { StatusBadge } from '../ui/StatusBadge';
 
 export function AppShell() {
-  const { user, isAuthenticated, logout, isAdmin } = useAuth();
+  const { user, isAuthenticated, logout, isAdmin, hasRole } = useAuth();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isWarehouseManager = hasRole('WAREHOUSE_MANAGER') || isAdmin;
+  const isFpsOperator = hasRole('FPS_OPERATOR') || isAdmin;
 
   const handleLogout = async () => {
     await logout();
@@ -102,6 +109,58 @@ export function AppShell() {
                 >
                   <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
                   <span>Request Staff Access</span>
+                </NavLink>
+
+                {isWarehouseManager ? (
+                  <NavLink
+                    to="/warehouse-inventory"
+                    className={({ isActive }) =>
+                      `inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+                      }`
+                    }
+                  >
+                    <Package className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>Warehouse</span>
+                  </NavLink>
+                ) : null}
+
+                {isFpsOperator ? (
+                  <NavLink
+                    to="/fps-distribution"
+                    className={({ isActive }) =>
+                      `inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+                      }`
+                    }
+                  >
+                    <Store className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>FPS Dispense</span>
+                  </NavLink>
+                ) : null}
+
+                <NavLink
+                  to="/beneficiary-entitlements"
+                  className={({ isActive }) =>
+                    `inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+                    }`
+                  }
+                >
+                  <Award className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Ration Quota</span>
+                </NavLink>
+
+                <NavLink
+                  to="/distribution-ledger"
+                  className={({ isActive }) =>
+                    `inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+                    }`
+                  }
+                >
+                  <History className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Ledger</span>
                 </NavLink>
 
                 {isAdmin ? (
@@ -245,6 +304,38 @@ export function AppShell() {
                     className="rounded px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
                   >
                     Request Staff Access
+                  </NavLink>
+                  {isWarehouseManager ? (
+                    <NavLink
+                      to="/warehouse-inventory"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="rounded px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                    >
+                      Warehouse Inventory
+                    </NavLink>
+                  ) : null}
+                  {isFpsOperator ? (
+                    <NavLink
+                      to="/fps-distribution"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="rounded px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                    >
+                      FPS Distribution
+                    </NavLink>
+                  ) : null}
+                  <NavLink
+                    to="/beneficiary-entitlements"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    Ration Quota
+                  </NavLink>
+                  <NavLink
+                    to="/distribution-ledger"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    On-Chain Ledger
                   </NavLink>
                   {isAdmin ? (
                     <>

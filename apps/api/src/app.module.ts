@@ -13,6 +13,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { StaffRequestsModule } from './staff-requests/staff-requests.module';
 import { AdminModule } from './admin/admin.module';
+import { BlockchainModule } from './blockchain/blockchain.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AdminModule } from './admin/admin.module';
     UsersModule,
     StaffRequestsModule,
     AdminModule,
+    BlockchainModule,
   ],
 })
 export class AppModule implements NestModule {
