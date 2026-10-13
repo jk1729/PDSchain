@@ -25,8 +25,9 @@ packages/contracts/typechain-types/
 packages/contracts/deployments/local.json
 packages/contracts/deployments/*.local.json
 
-# Database & Local Data
+# Database, Dev Mailbox & Local Data
 .postgres-data/
+.dev-mailbox/
 *.db
 *.sqlite
 *.sqlite3
@@ -52,4 +53,3 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
-

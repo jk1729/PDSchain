@@ -1,7 +1,9 @@
+import cookieParser from 'cookie-parser';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { AllExceptionsFilter } from './http-exception.filter';
 
 export function configureNestApp(app: INestApplication): void {
+  app.use(cookieParser());
   app.setGlobalPrefix('api/v1');
 
   const rawOrigins =
@@ -23,7 +25,13 @@ export function configureNestApp(app: INestApplication): void {
       }
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-Id'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Correlation-Id',
+      'X-CSRF-Token',
+      'x-csrf-token',
+    ],
     exposedHeaders: ['X-Correlation-Id'],
     credentials: true,
   });

@@ -2,6 +2,7 @@ import { Loader2 } from 'lucide-react';
 
 export interface LoadingIndicatorProps {
   label?: string;
+  message?: string;
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -13,8 +14,10 @@ const sizeMap = {
 
 export function LoadingIndicator({
   label = 'Loading service telemetry...',
+  message,
   size = 'md',
 }: LoadingIndicatorProps) {
+  const displayLabel = message ?? label;
   return (
     <div
       role="status"
@@ -22,7 +25,7 @@ export function LoadingIndicator({
       className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
     >
       <Loader2 className={`${sizeMap[size]} animate-spin text-slate-800`} aria-hidden="true" />
-      <span>{label}</span>
+      <span>{displayLabel}</span>
     </div>
   );
 }

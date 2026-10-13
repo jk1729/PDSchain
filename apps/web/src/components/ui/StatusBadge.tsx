@@ -1,6 +1,7 @@
 import * as React from 'react';
 
-export type StatusBadgeVariant = 'operational' | 'degraded' | 'offline' | 'pending' | 'neutral';
+export type StatusBadgeVariant =
+  'operational' | 'degraded' | 'offline' | 'pending' | 'neutral' | 'success' | 'error' | 'warning';
 
 export interface StatusBadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   status: StatusBadgeVariant;
@@ -12,11 +13,23 @@ const badgeStyles: Record<StatusBadgeVariant, { wrapper: string; dot: string }> 
     wrapper: 'bg-emerald-50 text-emerald-900 border-emerald-300',
     dot: 'bg-emerald-600',
   },
+  success: {
+    wrapper: 'bg-emerald-50 text-emerald-900 border-emerald-300',
+    dot: 'bg-emerald-600',
+  },
   degraded: {
     wrapper: 'bg-amber-50 text-amber-900 border-amber-300',
     dot: 'bg-amber-600',
   },
+  warning: {
+    wrapper: 'bg-amber-50 text-amber-900 border-amber-300',
+    dot: 'bg-amber-600',
+  },
   offline: {
+    wrapper: 'bg-red-50 text-red-900 border-red-300',
+    dot: 'bg-red-600',
+  },
+  error: {
     wrapper: 'bg-red-50 text-red-900 border-red-300',
     dot: 'bg-red-600',
   },

@@ -30,7 +30,8 @@
     "contracts:compile": "npm run compile --workspace=@pdschain/contracts",
     "contracts:test": "npm test --workspace=@pdschain/contracts",
     "contracts:deploy:local": "npm run deploy:local --workspace=@pdschain/contracts",
-    "doctor": "node scripts/doctor.mjs"
+    "doctor": "node scripts/doctor.mjs",
+    "admin:provision": "node scripts/provision-admin.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",

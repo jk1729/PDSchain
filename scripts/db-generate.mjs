@@ -35,4 +35,18 @@ if (fs.existsSync(prismaClientDir)) {
       fs.writeFileSync(targetFile, reExportContent, 'utf-8');
     }
   }
+
+  // Ensure runtime type definitions are present in @prisma/client/runtime
+  const runtimeSrcDir = path.join(rootDir, 'node_modules', 'prisma', 'prisma-client', 'runtime');
+  const runtimeDestDir = path.join(prismaClientDir, 'runtime');
+  if (fs.existsSync(runtimeSrcDir) && fs.existsSync(runtimeDestDir)) {
+    for (const f of fs.readdirSync(runtimeSrcDir)) {
+      if (f.endsWith('.d.ts') || f.endsWith('.d.mts')) {
+        const target = path.join(runtimeDestDir, f);
+        if (!fs.existsSync(target)) {
+          fs.copyFileSync(path.join(runtimeSrcDir, f), target);
+        }
+      }
+    }
+  }
 }

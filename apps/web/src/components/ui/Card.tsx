@@ -2,15 +2,23 @@ import * as React from 'react';
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
+  title?: string;
+  description?: string;
 }
 
-export function Card({ className = '', children, ...props }: CardProps) {
+export function Card({ className = '', title, description, children, ...props }: CardProps) {
   return (
     <div
       className={`rounded-lg border border-slate-200 bg-white shadow-sm ${className}`}
       {...props}
     >
-      {children}
+      {title ? (
+        <div className="border-b border-slate-100 px-6 py-4">
+          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+          {description ? <p className="mt-1 text-sm text-slate-600">{description}</p> : null}
+        </div>
+      ) : null}
+      <div className={title ? 'px-6 py-5' : ''}>{children}</div>
     </div>
   );
 }
