@@ -17,6 +17,20 @@ import {
   WarehouseReceiptPayload,
   WarehouseTransferPayload,
 } from '../types/distribution';
+import {
+  Commodity,
+  District,
+  FairPriceShop,
+  InventoryBatch,
+  ReceiptConfirmation,
+  ReconciliationReport,
+  StockAdjustment,
+  StockAllocation,
+  StockDispatch,
+  StockMovement,
+  StockReturn,
+  Warehouse,
+} from '../types/inventory';
 
 export interface DatabaseHealthProbe {
   status: 'up' | 'down';
@@ -550,6 +564,344 @@ export class ApiClient {
       `/distribution/transactions${q}`,
     );
     return res.transactions;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Phase 4 Districts, Warehouses, FPS, Commodities & Inventory
+  // ---------------------------------------------------------------------------
+  public async fetchDistricts(): Promise<District[]> {
+    const res = await this.request<{ districts: District[] }>('/inventory/districts');
+    return res.districts;
+  }
+
+  public async fetchDistrict(code: string): Promise<District> {
+    const res = await this.request<{ district: District }>(
+      `/inventory/districts/${encodeURIComponent(code)}`,
+    );
+    return res.district;
+  }
+
+  public async createDistrict(payload: { code: string; name: string; state?: string }) {
+    return this.request<{ district: District }>('/inventory/districts', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async fetchWarehouses(districtCode?: string): Promise<Warehouse[]> {
+    const q = districtCode ? `?districtCode=${encodeURIComponent(districtCode)}` : '';
+    const res = await this.request<{ warehouses: Warehouse[] }>(`/inventory/warehouses${q}`);
+    return res.warehouses;
+  }
+
+  public async fetchWarehouse(code: string): Promise<Warehouse> {
+    const res = await this.request<{ warehouse: Warehouse }>(
+      `/inventory/warehouses/${encodeURIComponent(code)}`,
+    );
+    return res.warehouse;
+  }
+
+  public async createWarehouse(payload: {
+    code: string;
+    name: string;
+    districtCode: string;
+    address?: string;
+    capacityMtl?: number;
+  }) {
+    return this.request<{ warehouse: Warehouse }>('/inventory/warehouses', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async fetchFairPriceShops(
+    districtCode?: string,
+    warehouseCode?: string,
+  ): Promise<FairPriceShop[]> {
+    const params = new URLSearchParams();
+    if (districtCode) params.set('districtCode', districtCode);
+    if (warehouseCode) params.set('warehouseCode', warehouseCode);
+    const q = params.toString() ? `?${params.toString()}` : '';
+    const res = await this.request<{ shops: FairPriceShop[] }>(`/inventory/fps${q}`);
+    return res.shops;
+  }
+
+  public async fetchFairPriceShop(code: string): Promise<FairPriceShop> {
+    const res = await this.request<{ shop: FairPriceShop }>(
+      `/inventory/fps/${encodeURIComponent(code)}`,
+    );
+    return res.shop;
+  }
+
+  public async createFairPriceShop(payload: {
+    code: string;
+    name: string;
+    districtCode: string;
+    warehouseCode?: string;
+    address?: string;
+  }) {
+    return this.request<{ shop: FairPriceShop }>('/inventory/fps', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async fetchCommoditiesRegistry(): Promise<Commodity[]> {
+    const res = await this.request<{ commodities: Commodity[] }>('/inventory/commodities');
+    return res.commodities;
+  }
+
+  public async fetchCommodity(code: string): Promise<Commodity> {
+    const res = await this.request<{ commodity: Commodity }>(
+      `/inventory/commodities/${encodeURIComponent(code)}`,
+    );
+    return res.commodity;
+  }
+
+  public async createCommodityRegistry(payload: {
+    code: string;
+    name: string;
+    unit: string;
+    description?: string;
+  }) {
+    return this.request<{ commodity: Commodity }>('/inventory/commodities', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async fetchInventoryBatches(
+    locationType?: 'WAREHOUSE' | 'FPS',
+    locationCode?: string,
+    commodityCode?: string,
+  ): Promise<InventoryBatch[]> {
+    const params = new URLSearchParams();
+    if (locationType) params.set('locationType', locationType);
+    if (locationCode) params.set('locationCode', locationCode);
+    if (commodityCode) params.set('commodityCode', commodityCode);
+    const q = params.toString() ? `?${params.toString()}` : '';
+    const res = await this.request<{ batches: InventoryBatch[] }>(`/inventory/batches${q}`);
+    return res.batches;
+  }
+
+  public async receiveInwardBatchStock(payload: {
+    warehouseCode: string;
+    commodityCode: string;
+    batchNumber: string;
+    quantity: number;
+    receiptRef?: string;
+  }) {
+    return this.request<{ batch: InventoryBatch; movement: StockMovement }>('/inventory/receipts', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async fetchStockAllocations(
+    warehouseCode?: string,
+    fpsCode?: string,
+    status?: string,
+  ): Promise<StockAllocation[]> {
+    const params = new URLSearchParams();
+    if (warehouseCode) params.set('warehouseCode', warehouseCode);
+    if (fpsCode) params.set('fpsCode', fpsCode);
+    if (status) params.set('status', status);
+    const q = params.toString() ? `?${params.toString()}` : '';
+    const res = await this.request<{ allocations: StockAllocation[] }>(
+      `/inventory/allocations${q}`,
+    );
+    return res.allocations;
+  }
+
+  public async createStockAllocation(payload: {
+    sourceWarehouseCode: string;
+    destinationFpsCode: string;
+    commodityCode: string;
+    allocatedQuantity: number;
+    period?: number;
+    allocationRef?: string;
+  }) {
+    return this.request<{ allocation: StockAllocation }>('/inventory/allocations', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async fetchStockDispatches(
+    warehouseCode?: string,
+    fpsCode?: string,
+    status?: string,
+  ): Promise<StockDispatch[]> {
+    const params = new URLSearchParams();
+    if (warehouseCode) params.set('warehouseCode', warehouseCode);
+    if (fpsCode) params.set('fpsCode', fpsCode);
+    if (status) params.set('status', status);
+    const q = params.toString() ? `?${params.toString()}` : '';
+    const res = await this.request<{ dispatches: StockDispatch[] }>(`/inventory/dispatches${q}`);
+    return res.dispatches;
+  }
+
+  public async createStockDispatch(payload: {
+    allocationId?: string;
+    sourceWarehouseCode: string;
+    destinationFpsCode: string;
+    commodityCode: string;
+    batchNumber: string;
+    dispatchedQuantity: number;
+    dispatchRef?: string;
+  }) {
+    return this.request<{
+      dispatch: StockDispatch;
+      updatedBatch: InventoryBatch;
+      movement: StockMovement;
+    }>('/inventory/dispatches', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async fetchReceiptConfirmations(fpsCode?: string): Promise<ReceiptConfirmation[]> {
+    const q = fpsCode ? `?fpsCode=${encodeURIComponent(fpsCode)}` : '';
+    const res = await this.request<{ confirmations: ReceiptConfirmation[] }>(
+      `/inventory/confirmations${q}`,
+    );
+    return res.confirmations;
+  }
+
+  public async confirmStockReceipt(
+    dispatchId: string,
+    payload: {
+      receivedQuantity: number;
+      shortageQuantity?: number;
+      excessQuantity?: number;
+      damagedQuantity?: number;
+      discrepancyReason?: string;
+      confirmationRef?: string;
+    },
+  ) {
+    return this.request<{
+      confirmation: ReceiptConfirmation;
+      fpsBatch: InventoryBatch;
+      movement: StockMovement;
+    }>(`/inventory/confirmations/${encodeURIComponent(dispatchId)}`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async fetchStockReturns(
+    fpsCode?: string,
+    warehouseCode?: string,
+    status?: string,
+  ): Promise<StockReturn[]> {
+    const params = new URLSearchParams();
+    if (fpsCode) params.set('fpsCode', fpsCode);
+    if (warehouseCode) params.set('warehouseCode', warehouseCode);
+    if (status) params.set('status', status);
+    const q = params.toString() ? `?${params.toString()}` : '';
+    const res = await this.request<{ returns: StockReturn[] }>(`/inventory/returns${q}`);
+    return res.returns;
+  }
+
+  public async createStockReturn(payload: {
+    sourceFpsCode: string;
+    destinationWarehouseCode: string;
+    commodityCode: string;
+    batchNumber?: string;
+    returnQuantity: number;
+    reason: string;
+    returnRef?: string;
+  }) {
+    return this.request<{
+      stockReturn: StockReturn;
+      updatedFpsBatch: InventoryBatch;
+      movement: StockMovement;
+    }>('/inventory/returns', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async confirmStockReturn(
+    returnId: string,
+    payload: { status: 'CONFIRMED' | 'REJECTED'; remarks?: string },
+  ) {
+    return this.request<{
+      stockReturn: StockReturn;
+      whBatch?: InventoryBatch;
+      movement?: StockMovement;
+    }>(`/inventory/returns/${encodeURIComponent(returnId)}/confirm`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async fetchStockAdjustments(
+    locationType?: 'WAREHOUSE' | 'FPS',
+    locationCode?: string,
+    commodityCode?: string,
+  ): Promise<StockAdjustment[]> {
+    const params = new URLSearchParams();
+    if (locationType) params.set('locationType', locationType);
+    if (locationCode) params.set('locationCode', locationCode);
+    if (commodityCode) params.set('commodityCode', commodityCode);
+    const q = params.toString() ? `?${params.toString()}` : '';
+    const res = await this.request<{ adjustments: StockAdjustment[] }>(
+      `/inventory/adjustments${q}`,
+    );
+    return res.adjustments;
+  }
+
+  public async createStockAdjustment(payload: {
+    locationType: 'WAREHOUSE' | 'FPS';
+    locationCode: string;
+    commodityCode: string;
+    batchNumber?: string;
+    adjustmentType: 'INCREASE' | 'DECREASE';
+    quantityChange: number;
+    reasonCode: string;
+    explanation: string;
+    adjustmentRef?: string;
+  }) {
+    return this.request<{
+      adjustment: StockAdjustment;
+      batch: InventoryBatch;
+      movement: StockMovement;
+    }>('/inventory/adjustments', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async fetchStockMovements(
+    locationType?: 'WAREHOUSE' | 'FPS',
+    locationCode?: string,
+    commodityCode?: string,
+    limit = 100,
+  ): Promise<StockMovement[]> {
+    const params = new URLSearchParams();
+    if (locationType) params.set('locationType', locationType);
+    if (locationCode) params.set('locationCode', locationCode);
+    if (commodityCode) params.set('commodityCode', commodityCode);
+    params.set('limit', String(limit));
+    const q = params.toString() ? `?${params.toString()}` : '';
+    const res = await this.request<{ movements: StockMovement[] }>(`/inventory/movements${q}`);
+    return res.movements;
+  }
+
+  public async fetchStockReconciliation(
+    locationType: 'WAREHOUSE' | 'FPS',
+    locationCode: string,
+    commodityCode?: string,
+  ): Promise<ReconciliationReport> {
+    const params = new URLSearchParams();
+    params.set('locationType', locationType);
+    params.set('locationCode', locationCode);
+    if (commodityCode) params.set('commodityCode', commodityCode);
+    const res = await this.request<{ report: ReconciliationReport }>(
+      `/inventory/reconciliation?${params.toString()}`,
+    );
+    return res.report;
   }
 }
 

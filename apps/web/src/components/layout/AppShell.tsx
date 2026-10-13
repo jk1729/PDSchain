@@ -3,19 +3,21 @@ import {
   Activity,
   Award,
   Boxes,
+  Building2,
   FileCheck2,
   FileText,
   History,
   Home,
   LogIn,
   LogOut,
+  MapPin,
   Menu,
-  Package,
   ShieldCheck,
   Store,
   User,
   UserPlus,
   Users,
+  Wheat,
   X,
 } from 'lucide-react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
@@ -29,6 +31,8 @@ export function AppShell() {
 
   const isWarehouseManager = hasRole('WAREHOUSE_MANAGER') || isAdmin;
   const isFpsOperator = hasRole('FPS_OPERATOR') || isAdmin;
+  const isDistrictOfficer = hasRole('DISTRICT_OFFICER') || isAdmin;
+  const isStaff = isWarehouseManager || isFpsOperator || isDistrictOfficer || isAdmin;
 
   const handleLogout = async () => {
     await logout();
@@ -111,33 +115,67 @@ export function AppShell() {
                   <span>Request Staff Access</span>
                 </NavLink>
 
-                {isWarehouseManager ? (
+                {isStaff ? (
                   <NavLink
-                    to="/warehouse-inventory"
+                    to="/inventory"
                     className={({ isActive }) =>
                       `inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
                         isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
                       }`
                     }
                   >
-                    <Package className="h-3.5 w-3.5" aria-hidden="true" />
-                    <span>Warehouse</span>
+                    <Boxes className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>Inventory</span>
                   </NavLink>
                 ) : null}
 
-                {isFpsOperator ? (
-                  <NavLink
-                    to="/fps-distribution"
-                    className={({ isActive }) =>
-                      `inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                        isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
-                      }`
-                    }
-                  >
-                    <Store className="h-3.5 w-3.5" aria-hidden="true" />
-                    <span>FPS Dispense</span>
-                  </NavLink>
-                ) : null}
+                <NavLink
+                  to="/districts"
+                  className={({ isActive }) =>
+                    `inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+                    }`
+                  }
+                >
+                  <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Districts</span>
+                </NavLink>
+
+                <NavLink
+                  to="/warehouses"
+                  className={({ isActive }) =>
+                    `inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+                    }`
+                  }
+                >
+                  <Building2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Warehouses</span>
+                </NavLink>
+
+                <NavLink
+                  to="/fair-price-shops"
+                  className={({ isActive }) =>
+                    `inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+                    }`
+                  }
+                >
+                  <Store className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Shops</span>
+                </NavLink>
+
+                <NavLink
+                  to="/commodities"
+                  className={({ isActive }) =>
+                    `inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+                    }`
+                  }
+                >
+                  <Wheat className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Commodities</span>
+                </NavLink>
 
                 <NavLink
                   to="/beneficiary-entitlements"
@@ -254,7 +292,7 @@ export function AppShell() {
               type="button"
               aria-expanded={mobileMenuOpen}
               aria-label="Toggle navigation menu"
-              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              onClick={() => setMobileMenuOpen((prev: boolean) => !prev)}
               className="inline-flex items-center justify-center rounded-md border border-slate-300 p-2 text-slate-700 hover:bg-slate-100"
             >
               {mobileMenuOpen ? (
@@ -305,24 +343,43 @@ export function AppShell() {
                   >
                     Request Staff Access
                   </NavLink>
-                  {isWarehouseManager ? (
+                  {isStaff ? (
                     <NavLink
-                      to="/warehouse-inventory"
+                      to="/inventory"
                       onClick={() => setMobileMenuOpen(false)}
                       className="rounded px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
                     >
-                      Warehouse Inventory
+                      Inventory & Logistics Hub
                     </NavLink>
                   ) : null}
-                  {isFpsOperator ? (
-                    <NavLink
-                      to="/fps-distribution"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="rounded px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                    >
-                      FPS Distribution
-                    </NavLink>
-                  ) : null}
+                  <NavLink
+                    to="/districts"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    Districts
+                  </NavLink>
+                  <NavLink
+                    to="/warehouses"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    Warehouses
+                  </NavLink>
+                  <NavLink
+                    to="/fair-price-shops"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    Fair Price Shops
+                  </NavLink>
+                  <NavLink
+                    to="/commodities"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    Commodities
+                  </NavLink>
                   <NavLink
                     to="/beneficiary-entitlements"
                     onClick={() => setMobileMenuOpen(false)}

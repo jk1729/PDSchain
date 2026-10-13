@@ -22,6 +22,11 @@ import { WarehouseInventoryPage } from './pages/WarehouseInventoryPage';
 import { FpsDistributionPage } from './pages/FpsDistributionPage';
 import { BeneficiaryEntitlementsPage } from './pages/BeneficiaryEntitlementsPage';
 import { DistributionLedgerPage } from './pages/DistributionLedgerPage';
+import { DistrictsPage } from './pages/DistrictsPage';
+import { WarehousesPage } from './pages/WarehousesPage';
+import { FairPriceShopsPage } from './pages/FairPriceShopsPage';
+import { CommoditiesPage } from './pages/CommoditiesPage';
+import { InventoryManagementPage } from './pages/InventoryManagementPage';
 
 export function App() {
   return (
@@ -44,8 +49,23 @@ export function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="profile" element={<ProfilePage />} />
               <Route path="staff-requests/new" element={<StaffRequestCreatePage />} />
+              <Route path="districts" element={<DistrictsPage />} />
+              <Route path="warehouses" element={<WarehousesPage />} />
+              <Route path="fair-price-shops" element={<FairPriceShopsPage />} />
+              <Route path="commodities" element={<CommoditiesPage />} />
               <Route path="beneficiary-entitlements" element={<BeneficiaryEntitlementsPage />} />
               <Route path="distribution-ledger" element={<DistributionLedgerPage />} />
+            </Route>
+
+            {/* Protected routes: Phase 4 Inventory Hub (Staff & Admins) */}
+            <Route
+              element={
+                <ProtectedRoute
+                  allowedRoles={['ADMIN', 'DISTRICT_OFFICER', 'WAREHOUSE_MANAGER', 'FPS_OPERATOR']}
+                />
+              }
+            >
+              <Route path="inventory" element={<InventoryManagementPage />} />
             </Route>
 
             {/* Protected routes: Warehouse Managers & Admins */}

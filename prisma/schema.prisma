@@ -62,6 +62,12 @@ model User {
   auditEventsAsActor  SecurityAuditEvent[]     @relation("AuditActor")
   auditEventsAsTarget SecurityAuditEvent[]     @relation("AuditTargetUser")
   blockchainTransactions BlockchainTransaction[] @relation("BlockchainTxActor")
+  allocationsCreated      StockAllocation[]        @relation("AllocationsCreated")
+  dispatchesCreated       StockDispatch[]          @relation("DispatchesCreated")
+  receiptsConfirmed       ReceiptConfirmation[]    @relation("ReceiptsConfirmed")
+  returnsCreated          StockReturn[]            @relation("ReturnsCreated")
+  stockAdjustmentsCreated StockAdjustment[]        @relation("StockAdjustmentsCreated")
+  stockMovementsCreated   StockMovement[]          @relation("StockMovementsCreated")
 
   @@index([status])
   @@map("users")
@@ -228,4 +234,353 @@ model BlockchainTransaction {
   @@index([claimRef])
   @@map("blockchain_transactions")
 }
+
+// ---------------------------------------------------------------------------
+// Phase 4: Districts, Warehouses, Fair Price Shops, Commodities & Inventory
+// ---------------------------------------------------------------------------
+
+enum InventoryLocationType {
+  WAREHOUSE
+  FPS
+}
+
+enum AllocationStatus {
+  PENDING
+  PARTIALLY_DISPATCHED
+  COMPLETED
+  CANCELLED
+}
+
+enum DispatchStatus {
+  DISPATCHED
+  PARTIALLY_RECEIVED
+  DELIVERED
+  CANCELLED
+}
+
+enum ConfirmationStatus {
+  CONFIRMED
+  DISCREPANCY_FLAGGED
+}
+
+enum ReturnStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+enum AdjustmentType {
+  INCREASE
+  DECREASE
+}
+
+enum AdjustmentStatus {
+  APPROVED
+  PENDING_REVIEW
+  REJECTED
+}
+
+enum StockMovementType {
+  RECEIPT_INWARD
+  DISPATCH_OUTWARD
+  RECEIPT_CONFIRMATION
+  RETURN_OUTWARD
+  RETURN_INWARD
+  ADJUSTMENT_ADD
+  ADJUSTMENT_SUBTRACT
+  DISTRIBUTION_DISPENSE
+}
+
+enum MovementDirection {
+  IN
+  OUT
+}
+
+model District {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique @db.VarChar(64)
+  name      String   @db.VarChar(120)
+  state     String   @default("Karnataka") @db.VarChar(64)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  warehouses Warehouse[]
+  shops      FairPriceShop[]
+
+  @@map("districts")
+}
+
+model Warehouse {
+  id           String   @id @default(uuid()) @db.Uuid
+  code         String   @unique @db.VarChar(64)
+  name         String   @db.VarChar(120)
+  districtId   String   @map("district_id") @db.Uuid
+  districtCode String   @map("district_code") @db.VarChar(64)
+  address      String?  @db.VarChar(255)
+  capacityMtl  Decimal? @map("capacity_mtl") @db.Decimal(12, 2)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  district            District          @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  servicedShops       FairPriceShop[]
+  batches             InventoryBatch[]
+  allocationsAsSource StockAllocation[]
+  dispatchesAsSource  StockDispatch[]
+  inboundReturns      StockReturn[]
+
+  @@index([districtId])
+  @@index([districtCode])
+  @@map("warehouses")
+}
+
+model FairPriceShop {
+  id            String   @id @default(uuid()) @db.Uuid
+  code          String   @unique @db.VarChar(64)
+  name          String   @db.VarChar(120)
+  districtId    String   @map("district_id") @db.Uuid
+  districtCode  String   @map("district_code") @db.VarChar(64)
+  warehouseId   String?  @map("warehouse_id") @db.Uuid
+  warehouseCode String?  @map("warehouse_code") @db.VarChar(64)
+  address       String?  @db.VarChar(255)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  district                 District              @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  designatedWarehouse      Warehouse?            @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
+  batches                  InventoryBatch[]
+  allocationsAsDestination StockAllocation[]
+  dispatchesAsDestination  StockDispatch[]
+  receiptConfirmations     ReceiptConfirmation[]
+  outboundReturns          StockReturn[]
+
+  @@index([districtId])
+  @@index([districtCode])
+  @@index([warehouseId])
+  @@map("fair_price_shops")
+}
+
+model Commodity {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(64)
+  name        String   @db.VarChar(120)
+  unit        String   @db.VarChar(32)
+  description String?  @db.VarChar(255)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  batches     InventoryBatch[]
+  movements   StockMovement[]
+  allocations StockAllocation[]
+  dispatches  StockDispatch[]
+  returns     StockReturn[]
+  adjustments StockAdjustment[]
+
+  @@map("commodities")
+}
+
+model InventoryBatch {
+  id              String                @id @default(uuid()) @db.Uuid
+  batchNumber     String                @map("batch_number") @db.VarChar(128)
+  commodityId     String                @map("commodity_id") @db.Uuid
+  commodityCode   String                @map("commodity_code") @db.VarChar(64)
+  locationType    InventoryLocationType @map("location_type")
+  locationCode    String                @map("location_code") @db.VarChar(64)
+  warehouseId     String?               @map("warehouse_id") @db.Uuid
+  fpsId           String?               @map("fps_id") @db.Uuid
+  initialQuantity Decimal               @map("initial_quantity") @db.Decimal(18, 4)
+  currentQuantity Decimal               @map("current_quantity") @db.Decimal(18, 4)
+  unit            String                @db.VarChar(32)
+  receiptRef      String?               @map("receipt_ref") @db.VarChar(128)
+  status          String                @default("ACTIVE") @db.VarChar(32)
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  commodity Commodity      @relation(fields: [commodityId], references: [id], onDelete: Restrict)
+  warehouse Warehouse?     @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
+  fps       FairPriceShop? @relation(fields: [fpsId], references: [id], onDelete: SetNull)
+
+  @@unique([locationType, locationCode, commodityId, batchNumber])
+  @@index([locationCode, commodityCode])
+  @@index([status])
+  @@map("inventory_batches")
+}
+
+model StockAllocation {
+  id                   String           @id @default(uuid()) @db.Uuid
+  allocationRef        String           @unique @map("allocation_ref") @db.VarChar(128)
+  sourceWarehouseId    String           @map("source_warehouse_id") @db.Uuid
+  sourceWarehouseCode  String           @map("source_warehouse_code") @db.VarChar(64)
+  destinationFpsId     String           @map("destination_fps_id") @db.Uuid
+  destinationFpsCode   String           @map("destination_fps_code") @db.VarChar(64)
+  commodityId          String           @map("commodity_id") @db.Uuid
+  commodityCode        String           @map("commodity_code") @db.VarChar(64)
+  allocatedQuantity    Decimal          @map("allocated_quantity") @db.Decimal(18, 4)
+  dispatchedQuantity   Decimal          @default(0) @map("dispatched_quantity") @db.Decimal(18, 4)
+  remainingQuantity    Decimal          @map("remaining_quantity") @db.Decimal(18, 4)
+  period               Int?
+  status               AllocationStatus @default(PENDING)
+  createdById          String           @map("created_by_id") @db.Uuid
+  approvedById         String?          @map("approved_by_id") @db.Uuid
+  approvedAt           DateTime?        @map("approved_at") @db.Timestamptz(6)
+  createdAt            DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  sourceWarehouse Warehouse     @relation(fields: [sourceWarehouseId], references: [id], onDelete: Restrict)
+  destinationFps  FairPriceShop @relation(fields: [destinationFpsId], references: [id], onDelete: Restrict)
+  commodity       Commodity     @relation(fields: [commodityId], references: [id], onDelete: Restrict)
+  createdByUser   User          @relation("AllocationsCreated", fields: [createdById], references: [id], onDelete: Restrict)
+  dispatches      StockDispatch[]
+
+  @@index([sourceWarehouseCode])
+  @@index([destinationFpsCode])
+  @@index([status])
+  @@map("stock_allocations")
+}
+
+model StockDispatch {
+  id                 String         @id @default(uuid()) @db.Uuid
+  dispatchRef        String         @unique @map("dispatch_ref") @db.VarChar(128)
+  allocationId       String?        @map("allocation_id") @db.Uuid
+  sourceWarehouseId  String         @map("source_warehouse_id") @db.Uuid
+  sourceWarehouseCode String        @map("source_warehouse_code") @db.VarChar(64)
+  destinationFpsId   String         @map("destination_fps_id") @db.Uuid
+  destinationFpsCode String         @map("destination_fps_code") @db.VarChar(64)
+  commodityId        String         @map("commodity_id") @db.Uuid
+  commodityCode      String         @map("commodity_code") @db.VarChar(64)
+  batchNumber        String?        @map("batch_number") @db.VarChar(128)
+  dispatchedQuantity Decimal        @map("dispatched_quantity") @db.Decimal(18, 4)
+  receivedQuantity   Decimal        @default(0) @map("received_quantity") @db.Decimal(18, 4)
+  status             DispatchStatus @default(DISPATCHED)
+  dispatchedById     String         @map("dispatched_by_id") @db.Uuid
+  dispatchedAt       DateTime       @default(now()) @map("dispatched_at") @db.Timestamptz(6)
+  blockchainTxHash   String?        @map("blockchain_tx_hash") @db.VarChar(128)
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  sourceWarehouse  Warehouse             @relation(fields: [sourceWarehouseId], references: [id], onDelete: Restrict)
+  destinationFps   FairPriceShop         @relation(fields: [destinationFpsId], references: [id], onDelete: Restrict)
+  commodity        Commodity             @relation(fields: [commodityId], references: [id], onDelete: Restrict)
+  allocation       StockAllocation?      @relation(fields: [allocationId], references: [id], onDelete: SetNull)
+  dispatchedByUser User                  @relation("DispatchesCreated", fields: [dispatchedById], references: [id], onDelete: Restrict)
+  confirmations    ReceiptConfirmation[]
+
+  @@index([sourceWarehouseCode])
+  @@index([destinationFpsCode])
+  @@index([status])
+  @@map("stock_dispatches")
+}
+
+model ReceiptConfirmation {
+  id                 String             @id @default(uuid()) @db.Uuid
+  confirmationRef    String             @unique @map("confirmation_ref") @db.VarChar(128)
+  dispatchId         String             @map("dispatch_id") @db.Uuid
+  dispatchRef        String             @map("dispatch_ref") @db.VarChar(128)
+  destinationFpsId   String             @map("destination_fps_id") @db.Uuid
+  destinationFpsCode String             @map("destination_fps_code") @db.VarChar(64)
+  commodityId        String             @map("commodity_id") @db.Uuid
+  commodityCode      String             @map("commodity_code") @db.VarChar(64)
+  batchNumber        String?            @map("batch_number") @db.VarChar(128)
+  receivedQuantity   Decimal            @map("received_quantity") @db.Decimal(18, 4)
+  shortageQuantity   Decimal            @default(0) @map("shortage_quantity") @db.Decimal(18, 4)
+  excessQuantity     Decimal            @default(0) @map("excess_quantity") @db.Decimal(18, 4)
+  damagedQuantity    Decimal            @default(0) @map("damaged_quantity") @db.Decimal(18, 4)
+  discrepancyReason  String?            @map("discrepancy_reason") @db.VarChar(500)
+  status             ConfirmationStatus @default(CONFIRMED)
+  confirmedById      String             @map("confirmed_by_id") @db.Uuid
+  confirmedAt        DateTime           @default(now()) @map("confirmed_at") @db.Timestamptz(6)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  dispatch        StockDispatch @relation(fields: [dispatchId], references: [id], onDelete: Restrict)
+  destinationFps  FairPriceShop @relation(fields: [destinationFpsId], references: [id], onDelete: Restrict)
+  confirmedByUser User          @relation("ReceiptsConfirmed", fields: [confirmedById], references: [id], onDelete: Restrict)
+
+  @@index([dispatchId])
+  @@index([destinationFpsCode])
+  @@map("receipt_confirmations")
+}
+
+model StockReturn {
+  id                       String       @id @default(uuid()) @db.Uuid
+  returnRef                String       @unique @map("return_ref") @db.VarChar(128)
+  sourceFpsId              String       @map("source_fps_id") @db.Uuid
+  sourceFpsCode            String       @map("source_fps_code") @db.VarChar(64)
+  destinationWarehouseId   String       @map("destination_warehouse_id") @db.Uuid
+  destinationWarehouseCode String       @map("destination_warehouse_code") @db.VarChar(64)
+  originatingDispatchRef   String?      @map("originating_dispatch_ref") @db.VarChar(128)
+  commodityId              String       @map("commodity_id") @db.Uuid
+  commodityCode            String       @map("commodity_code") @db.VarChar(64)
+  batchNumber              String?      @map("batch_number") @db.VarChar(128)
+  returnQuantity           Decimal      @map("return_quantity") @db.Decimal(18, 4)
+  reason                   String       @db.VarChar(500)
+  status                   ReturnStatus @default(CONFIRMED)
+  returnedById             String       @map("returned_by_id") @db.Uuid
+  confirmedById            String?      @map("confirmed_by_id") @db.Uuid
+  confirmedAt              DateTime?    @map("confirmed_at") @db.Timestamptz(6)
+  createdAt                DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  sourceFps            FairPriceShop @relation(fields: [sourceFpsId], references: [id], onDelete: Restrict)
+  destinationWarehouse Warehouse     @relation(fields: [destinationWarehouseId], references: [id], onDelete: Restrict)
+  commodity            Commodity     @relation(fields: [commodityId], references: [id], onDelete: Restrict)
+  returnedByUser       User          @relation("ReturnsCreated", fields: [returnedById], references: [id], onDelete: Restrict)
+
+  @@index([sourceFpsCode])
+  @@index([destinationWarehouseCode])
+  @@map("stock_returns")
+}
+
+model StockAdjustment {
+  id               String                @id @default(uuid()) @db.Uuid
+  adjustmentRef    String                @unique @map("adjustment_ref") @db.VarChar(128)
+  locationType     InventoryLocationType @map("location_type")
+  locationCode     String                @map("location_code") @db.VarChar(64)
+  commodityId      String                @map("commodity_id") @db.Uuid
+  commodityCode    String                @map("commodity_code") @db.VarChar(64)
+  batchNumber      String?               @map("batch_number") @db.VarChar(128)
+  adjustmentType   AdjustmentType        @map("adjustment_type")
+  quantityChange   Decimal               @map("quantity_change") @db.Decimal(18, 4)
+  previousBalance  Decimal               @map("previous_balance") @db.Decimal(18, 4)
+  resultingBalance Decimal               @map("resulting_balance") @db.Decimal(18, 4)
+  reasonCode       String                @map("reason_code") @db.VarChar(64)
+  explanation      String                @db.VarChar(500)
+  actorUserId      String                @map("actor_user_id") @db.Uuid
+  status           AdjustmentStatus      @default(APPROVED)
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  commodity Commodity @relation(fields: [commodityId], references: [id], onDelete: Restrict)
+  actorUser User      @relation("StockAdjustmentsCreated", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([locationCode, commodityCode])
+  @@map("stock_adjustments")
+}
+
+model StockMovement {
+  id                String                @id @default(uuid()) @db.Uuid
+  movementRef       String                @unique @map("movement_ref") @db.VarChar(128)
+  movementType      StockMovementType     @map("movement_type")
+  locationType      InventoryLocationType @map("location_type")
+  locationCode      String                @map("location_code") @db.VarChar(64)
+  commodityId       String                @map("commodity_id") @db.Uuid
+  commodityCode     String                @map("commodity_code") @db.VarChar(64)
+  batchNumber       String?               @map("batch_number") @db.VarChar(128)
+  quantity          Decimal               @db.Decimal(18, 4)
+  direction         MovementDirection
+  balanceAfter      Decimal               @map("balance_after") @db.Decimal(18, 4)
+  sourceDocumentRef String                @map("source_document_ref") @db.VarChar(128)
+  actorUserId       String                @map("actor_user_id") @db.Uuid
+  blockchainTxHash  String?               @map("blockchain_tx_hash") @db.VarChar(128)
+  createdAt         DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  commodity Commodity @relation(fields: [commodityId], references: [id], onDelete: Restrict)
+  actorUser User      @relation("StockMovementsCreated", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([locationType, locationCode, commodityCode, createdAt])
+  @@index([movementType, createdAt])
+  @@index([sourceDocumentRef])
+  @@map("stock_movements")
+}
+
 
